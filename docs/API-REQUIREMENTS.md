@@ -54,8 +54,36 @@ Purpose:
 Purpose:
 
 - Authenticate customers using email and password.
-- Return a secure session or authentication token.
-- Reject invalid credentials with a suitable error message.
+- Return a signed JWT that expires after one hour.
+- Reject invalid credentials with `401` and the same message for unknown emails and incorrect passwords.
+- Require the backend `JWT_SECRET` environment variable; never expose it to the frontend.
+
+Request body:
+
+```json
+{
+	"email": "customer@example.com",
+	"password": "your-password"
+}
+```
+
+Successful response (`200`):
+
+```json
+{
+	"message": "Login successful",
+	"token": "<signed-jwt>",
+	"user": {
+		"id": "<user-id>",
+		"Firstname": "Customer",
+		"Lastname": "Name",
+		"email": "customer@example.com"
+	}
+}
+```
+
+Clients should send the token in the `Authorization: Bearer <token>` header when calling authenticated endpoints.
+Each successful login also creates a server-side session record that expires after one hour. Its identifier is included in the JWT `jti` claim; the raw JWT is not stored in the database.
 
 ### Login with Email OTP
 
@@ -64,12 +92,18 @@ Purpose:
 Purpose:
 
 - Send a one-time login code to a registered email.
+- Request body: `{ "email": "customer@example.com" }`.
+- A six-digit OTP expires after 10 minutes. The response does not disclose whether the account exists.
 
 `POST /api/auth/verify-login-otp`
 
 Purpose:
 
 - Validate the login OTP and authenticate the customer.
+- Request body: `{ "email": "customer@example.com", "otp": "123456" }`.
+- On success, return `200` with `message`, a signed JWT in `token` (one-hour expiration), and the same safe `user` fields as password login.
+- Successful verification also creates the same one-hour server-side session described in the password login section.
+- Return `400` for missing or malformed input, `401` for an invalid or expired OTP, and `500` if authentication is not configured or verification fails.
 
 ### Forgot Password
 
@@ -79,7 +113,9 @@ Purpose:
 
 - Request a password reset OTP.
 - Avoid revealing whether an email address is registered.
-- Apply rate limits.
+- Apply a 60-second resend cooldown and expire OTPs after 10 minutes.
+- Request body: `{ "email": "customer@example.com" }`.
+- Return `200` with a generic message whether or not the account exists.
 
 ### Verify Password Reset OTP
 
@@ -89,6 +125,9 @@ Purpose:
 
 - Verify the password reset OTP on the server.
 - Return a short-lived, single-use reset token after successful verification.
+- Request body: `{ "email": "customer@example.com", "otp": "123456" }`.
+- Return `200` with `{ "message": "OTP verified successfully", "resetToken": "<opaque-token>" }`; invalid or expired codes return `401`.
+- Limit verification to five attempts per OTP.
 
 ### Reset Password
 
@@ -100,6 +139,8 @@ Purpose:
 - Validate password requirements.
 - Save the password securely using a password hash.
 - Invalidate the reset token after successful use.
+- Request body: `{ "email": "customer@example.com", "resetToken": "<opaque-token>", "newPassword": "new-password" }`.
+- Require a password with at least 8 characters. Return `401` for invalid or expired reset tokens.
 
 ### Logout
 
@@ -160,7 +201,7 @@ Actual secrets must never be committed to GitHub.
 
 The frontend will use `frontend/.env.local` for the public API base URL, for example:
 
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5500/api
 
 The actual URL must match the backend configuration.
 
@@ -208,3 +249,12 @@ These APIs should be designed according to the finalized e-commerce requirements
 Authentication is complete only when registration, email verification, login, OTP login, forgot password, reset password, and logout work through the backend and are tested end-to-end.
 
 The frontend must never show a successful verification or account creation unless the backend confirms success.
+## Backend api integration
+for registration send email
+for otp verificati send first name,last name,phone,password,email,otp
+for resend otp send email
+for login with password send email,password
+for login with otp send email
+for login with otp verification email,otp
+for login with reset otp send verify_reset_otp
+for forgot password send email
