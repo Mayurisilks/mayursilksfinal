@@ -13,14 +13,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/utils";
 
 export default function ResetPasswordOtpPage() {
   const router = useRouter();
 
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [seconds, setSeconds] = useState(30);
+  const [seconds, setSeconds] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = window.sessionStorage.getItem("passwordResetEmail");
+    if (!savedEmail) {
+      router.replace("/forgot-password");
+      return;
+    }
+    setEmail(savedEmail);
+  }, [router]);
 
   useEffect(() => {
     if (canResend) return;
@@ -40,7 +53,7 @@ export default function ResetPasswordOtpPage() {
     return () => window.clearInterval(timer);
   }, [canResend]);
 
-  function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
+  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (otp.length !== 6) {
@@ -48,19 +61,68 @@ export default function ResetPasswordOtpPage() {
       return;
     }
 
-    // Backend OTP verification must happen here.
-    // Do not treat an OTP as verified until the server confirms it.
-    router.push("/reset-password");
+    setError("");
+    setNotice("");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-reset-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        resetToken?: string;
+      };
+      if (!response.ok || !result.resetToken) {
+        throw new Error(result.message ?? "Unable to verify OTP");
+      }
+
+      window.sessionStorage.setItem("passwordResetToken", result.resetToken);
+      router.push("/reset-password");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to verify OTP",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleResendOtp() {
-    if (!canResend) return;
+  async function handleResendOtp() {
+    if (!canResend || !email) return;
 
-    // Request a new OTP from the backend here.
-    setOtp("");
     setError("");
-    setSeconds(30);
-    setCanResend(false);
+    setNotice("");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+      if (!response.ok) {
+        throw new Error(result.message ?? "Unable to resend OTP");
+      }
+
+      setOtp("");
+      setNotice(result.message ?? "If the account exists, a reset OTP has been sent.");
+      setSeconds(60);
+      setCanResend(false);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to resend OTP",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -76,7 +138,7 @@ export default function ResetPasswordOtpPage() {
           </CardTitle>
 
           <CardDescription className="text-sm leading-6 text-stone-500">
-            Enter the 6-digit verification code to reset your password.
+            Enter the 6-digit verification code sent to {email || "your email"}.
           </CardDescription>
         </CardHeader>
 
@@ -114,14 +176,19 @@ export default function ResetPasswordOtpPage() {
                   {error}
                 </p>
               )}
+              {notice && (
+                <p role="status" className="text-sm text-green-800">
+                  {notice}
+                </p>
+              )}
             </div>
 
             <Button
               type="submit"
-              disabled={otp.length !== 6}
+              disabled={otp.length !== 6 || isSubmitting || !email}
               className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Verify OTP
+              {isSubmitting ? "Verifying..." : "Verify OTP"}
             </Button>
           </form>
 
@@ -130,6 +197,7 @@ export default function ResetPasswordOtpPage() {
               <button
                 type="button"
                 onClick={handleResendOtp}
+                disabled={isSubmitting}
                 className="text-sm font-semibold text-amber-800 hover:underline"
               >
                 Resend OTP

@@ -14,15 +14,46 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/utils";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    alert(`Login form submitted for: ${email}`);
+    setError("");
+    setNotice("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        token?: string;
+      };
+
+      if (!response.ok || !result.token) {
+        throw new Error(result.message ?? "Unable to sign in");
+      }
+
+      window.sessionStorage.setItem("authToken", result.token);
+      setNotice("Login successful.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Unable to sign in",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -110,11 +141,15 @@ export default function LoginForm() {
 
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
             >
-              Sign In
+              {isSubmitting ? "Signing In..." : "Sign In"}
             </Button>
           </form>
+
+          {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+          {notice && <p role="status" className="mt-4 text-sm text-green-800">{notice}</p>}
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-stone-200" />

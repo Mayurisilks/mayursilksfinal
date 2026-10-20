@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/utils";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -24,8 +25,9 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleResetPassword(event: React.FormEvent<HTMLFormElement>) {
+  async function handleResetPassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
@@ -39,8 +41,39 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // Connect the real password-reset API here.
-    router.push("/reset-password-success");
+    const email = window.sessionStorage.getItem("passwordResetEmail");
+    const resetToken = window.sessionStorage.getItem("passwordResetToken");
+    if (!email || !resetToken) {
+      setError("Your reset session has expired. Request a new verification code.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, resetToken, newPassword: password }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+      if (!response.ok) {
+        throw new Error(result.message ?? "Unable to reset password");
+      }
+
+      window.sessionStorage.removeItem("passwordResetEmail");
+      window.sessionStorage.removeItem("passwordResetToken");
+      router.push("/reset-password-success");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to reset password",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -143,9 +176,10 @@ export default function ResetPasswordPage() {
 
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
             >
-              Save New Password
+              {isSubmitting ? "Saving..." : "Save New Password"}
             </Button>
           </form>
 

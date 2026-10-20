@@ -14,27 +14,81 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/utils";
 
 export default function EmailOtpForm() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  function handleSendOtp(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSendOtp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+    setNotice("");
+    setIsSubmitting(true);
 
-    // Demo only: the backend must send the real email OTP.
-    setOtp("");
-    setOtpSent(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/send-login-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.message ?? "Unable to send OTP");
+      }
+
+      setOtp("");
+      setOtpSent(true);
+      setNotice(result.message ?? "If the account exists, a login OTP has been sent.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Unable to send OTP",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
+  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (otp.length !== 6) return;
 
-    // Real OTP verification will be connected to the backend later.
-    alert("OTP verification is not connected yet.");
+    setError("");
+    setNotice("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-login-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        token?: string;
+      };
+
+      if (!response.ok || !result.token) {
+        throw new Error(result.message ?? "Unable to verify OTP");
+      }
+
+      window.sessionStorage.setItem("authToken", result.token);
+      setNotice("Login successful.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Unable to verify OTP",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -81,15 +135,16 @@ export default function EmailOtpForm() {
 
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
               >
-                Send OTP
+                {isSubmitting ? "Sending..." : "Send OTP"}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-5">
               <p className="text-sm text-stone-600">
-                Demo: OTP sending is not connected yet. Email address:{" "}
+                If the account exists, a code was sent to {" "}
                 <span className="font-medium text-stone-900">{email}</span>
               </p>
 
@@ -120,10 +175,10 @@ export default function EmailOtpForm() {
 
               <Button
                 type="submit"
-                disabled={otp.length !== 6}
+                disabled={otp.length !== 6 || isSubmitting}
                 className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
               >
-                Verify OTP &amp; Login
+                {isSubmitting ? "Verifying..." : "Verify OTP & Login"}
               </Button>
 
               <button
@@ -131,13 +186,19 @@ export default function EmailOtpForm() {
                 onClick={() => {
                   setOtp("");
                   setOtpSent(false);
+                  setError("");
+                  setNotice("");
                 }}
+                disabled={isSubmitting}
                 className="w-full text-sm font-medium text-amber-800 hover:underline"
               >
                 Change email address
               </button>
             </form>
           )}
+
+          {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+          {notice && <p role="status" className="mt-4 text-sm text-green-800">{notice}</p>}
 
           <p className="mt-6 text-center text-sm text-stone-600">
             Back to{" "}

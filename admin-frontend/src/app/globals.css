@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--mayuri-ivory);
+  color: var(--mayuri-text);
+  font-family: var(--font-urbanist), sans-serif;
+}
+
+:root {
+  --mayuri-maroon: #550022;
+  --mayuri-maroon-dark: #3d0019;
+  --mayuri-gold: #d8b878;
+  --mayuri-ivory: #f8f5f0;
+  --mayuri-text: #30231f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--mayuri-ivory);
+  color: var(--mayuri-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: var(--mayuri-maroon);
+  color: white;
+}
+
+@keyframes mayuri-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mayuri-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.06);
+  }
+}
+
+.mayuri-animate-in {
+  animation: mayuri-fade-up 650ms ease-out both;
+}
+
+.mayuri-glow {
+  animation: mayuri-glow 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
