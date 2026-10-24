@@ -150,7 +150,7 @@ export const forgot_password = async (req, res) => {
                 );
 
                 try {
-                    await sendOtp(email, otp, 'Password Reset');
+                    await sendOtp(email, otp);
                 } catch (error) {
                     await PasswordReset.deleteOne({ _id: resetRecord._id, otpHash });
                     throw error;
@@ -171,8 +171,11 @@ export const verify_reset_otp = async (req, res) => {
     try {
         const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
         const otp = req.body?.otp;
-        if (!email || !/^\d{6}$/.test(String(otp ?? ''))) {
-            return res.status(400).json({ message: 'Email and a 6-digit OTP are required' });
+        const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+        if (!email || !/^\d{6}$/.test(String(otp ?? '')) || newPassword.length < 8) {
+            return res.status(400).json({
+                message: 'Email, a 6-digit OTP, and a password with at least 8 characters are required',
+            });
         }
 
         const now = new Date();
@@ -193,8 +196,8 @@ export const verify_reset_otp = async (req, res) => {
             return res.status(401).json({ message: 'Invalid or expired OTP' });
         }
 
-        const resetToken = randomBytes(32).toString('base64url');
-        const updateResult = await PasswordReset.updateOne(
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const consumeResult = await PasswordReset.updateOne(
             {
                 _id: resetRecord._id,
                 otpHash: resetRecord.otpHash,
@@ -202,58 +205,27 @@ export const verify_reset_otp = async (req, res) => {
                 expiresAt: { $gt: now },
             },
             {
-                $set: {
-                    resetTokenHash: hashResetToken(resetToken),
-                    expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-                },
-                $unset: { otpHash: 1 },
+                $set: { expiresAt: new Date() },
+                $unset: { otpHash: 1, resetTokenHash: 1 },
             }
         );
-        if (!updateResult.modifiedCount) {
+        if (!consumeResult.modifiedCount) {
             return res.status(401).json({ message: 'Invalid or expired OTP' });
         }
 
-        return res.status(200).json({ message: 'OTP verified successfully', resetToken });
-    } catch (err) {
-        console.error('Unable to verify password reset OTP:', err);
-        return res.status(500).json({ message: 'Unable to verify OTP' });
-    }
-};
-
-export const reset_password = async (req, res) => {
-    try {
-        const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-        const resetToken = typeof req.body?.resetToken === 'string' ? req.body.resetToken : '';
-        const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
-        if (!email || !resetToken || !newPassword) {
-            return res.status(400).json({ message: 'Email, reset token, and new password are required' });
-        }
-        if (newPassword.length < 8) {
-            return res.status(400).json({ message: 'Password must contain at least 8 characters' });
-        }
-
-        const resetRecord = await PasswordReset.findOneAndDelete({
-            email,
-            resetTokenHash: hashResetToken(resetToken),
-            expiresAt: { $gt: new Date() },
-        });
-        if (!resetRecord) {
-            return res.status(401).json({ message: 'Invalid or expired reset token' });
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        const updateResult = await User.updateOne(
+        const passwordUpdate = await User.updateOne(
             { _id: resetRecord.userId },
             { $set: { password: hashedPassword } }
         );
-        if (!updateResult.matchedCount) {
-            return res.status(404).json({ message: 'User account no longer exists' });
+        if (!passwordUpdate.matchedCount) {
+            console.error('Unable to reset password: user does not exist');
+            return res.status(404).json({ message: 'Unable to reset password' });
         }
 
-        await Session.deleteMany({ userId: resetRecord.userId });
-        return res.status(200).json({ message: 'Password reset successfully' });
+        return res.status(200).json({ message: 'Password reset successful' });
     } catch (err) {
-        console.error('Unable to reset password:', err);
+        console.error('Unable to reset password after OTP verification:', err);
         return res.status(500).json({ message: 'Unable to reset password' });
     }
 };
+
