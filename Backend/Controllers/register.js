@@ -18,7 +18,7 @@ export const user_register = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
-
+    
     const otp = randomInt(100000, 1000000);
     const otpHash = await bcrypt.hash(String(otp), 10);
     await OTP.findOneAndUpdate(
@@ -41,14 +41,14 @@ export const user_register = async (req, res) => {
 
 export const otp_verification = async (req, res) => {
   try {
-
+   
   const email=req.body.email  
     const otp = req.body.otp ?? req.body.Otp;
    const pendinguser=await tempUser.findOne({email})
-
+    
     if (otp === undefined || otp === null || String(otp).trim() === '') {
       return res.status(400).json({ message: 'OTP is required' });
-    }
+    } 
 
     const savedOtp = await OTP.findOne({email})
 
