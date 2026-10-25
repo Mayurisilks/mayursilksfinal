@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import Navbar from "@/components/Navbar";
 
 const products = [
   {
@@ -27,9 +27,28 @@ const products = [
   },
 ];
 
-export default function HomePage() {
-  const [menuOpen, setMenuOpen] = useState(false);
+const collections = [
+  {
+    title: "Wedding Silks",
+    subtitle: "For your special day",
+    image:
+      "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=700&q=85",
+  },
+  {
+    title: "Traditional Sarees",
+    subtitle: "Rooted in heritage",
+    image:
+      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=700&q=85",
+  },
+  {
+    title: "Festive Collection",
+    subtitle: "Celebrate beautifully",
+    image:
+      "https://images.unsplash.com/photo-1583391733956-6c78276477e3?auto=format&fit=crop&w=700&q=85",
+  },
+];
 
+export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#F8F5F0] text-[#30231F]">
       {/* Announcement */}
@@ -37,90 +56,12 @@ export default function HomePage() {
         Discover timeless elegance with Mayuri Silks
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[#E9DFD2] bg-[#F8F5F0]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-8">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#D8B878] bg-[#550022] text-2xl text-[#D8B878]">
-              M
-            </span>
-            <span>
-              <span className="block text-lg font-bold tracking-[0.16em] text-[#550022]">
-                MAYURI SILKS
-              </span>
-              <span className="block text-[9px] tracking-[0.24em] text-[#94794F]">
-                TIMELESS INDIAN ELEGANCE
-              </span>
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-8 text-sm md:flex">
-            <Link href="/" className="font-semibold text-[#550022]">
-              Home
-            </Link>
-            <a href="#collections" className="transition hover:text-[#94794F]">
-              Collections
-            </a>
-            <a href="#featured" className="transition hover:text-[#94794F]">
-              Featured Sarees
-            </a>
-          </nav>
-
-          <div className="hidden items-center gap-3 sm:flex">
-            <Link
-              href="/login"
-              className="rounded-lg border border-[#550022] px-4 py-2.5 text-sm font-semibold text-[#550022] transition hover:bg-[#550022] hover:text-white"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-lg bg-[#550022] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#70002D]"
-            >
-              Create Account
-            </Link>
-          </div>
-
-          <button
-            type="button"
-            aria-label="Toggle navigation menu"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#E9DFD2] text-xl sm:hidden"
-          >
-            {menuOpen ? "×" : "☰"}
-          </button>
-        </div>
-
-        {menuOpen && (
-          <div className="space-y-3 border-t border-[#E9DFD2] bg-white p-5 sm:hidden">
-            <Link
-              href="/login"
-              onClick={() => setMenuOpen(false)}
-              className="block rounded-lg border border-[#550022] px-4 py-3 text-center font-semibold text-[#550022]"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              onClick={() => setMenuOpen(false)}
-              className="block rounded-lg bg-[#550022] px-4 py-3 text-center font-semibold text-white"
-            >
-              Create Account
-            </Link>
-            <a
-              href="#collections"
-              onClick={() => setMenuOpen(false)}
-              className="block py-2 text-center text-sm"
-            >
-              Explore Collections
-            </a>
-          </div>
-        )}
-      </header>
+      {/* Shared navigation */}
+      <Navbar />
 
       {/* Hero */}
       <section className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-10 sm:px-8 sm:py-16 lg:grid-cols-2 lg:gap-16 lg:py-20">
-        <div className="mayuri-animate-in order-2 lg:order-1">
+        <div className="order-2 lg:order-1">
           <p className="mb-5 text-xs font-bold tracking-[0.25em] text-[#94794F] sm:text-sm">
             THE BEAUTY OF TRADITION
           </p>
@@ -144,12 +85,6 @@ export default function HomePage() {
             >
               Explore Collection <span aria-hidden="true">→</span>
             </a>
-            <Link
-              href="/login"
-              className="rounded-lg border border-[#D8B878] px-6 py-3.5 text-sm font-semibold text-[#550022] transition hover:bg-white"
-            >
-              Sign In
-            </Link>
           </div>
 
           <div className="mt-10 flex flex-wrap gap-x-8 gap-y-4 border-t border-[#E5D9CA] pt-6">
@@ -171,6 +106,7 @@ export default function HomePage() {
         <div className="relative order-1 mx-auto w-full max-w-lg lg:order-2 lg:max-w-none">
           <div className="absolute -right-3 -top-3 h-24 w-24 rounded-tr-[40px] border-r border-t border-[#D8B878] sm:-right-5 sm:-top-5 sm:h-32 sm:w-32" />
           <div className="absolute -bottom-3 -left-3 h-24 w-24 rounded-bl-[40px] border-b border-l border-[#D8B878] sm:-bottom-5 sm:-left-5 sm:h-32 sm:w-32" />
+
           <div className="relative overflow-hidden rounded-t-[180px] rounded-b-2xl bg-[#E9DFD2]">
             <img
               src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1200&q=90"
@@ -211,26 +147,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {[
-              {
-                title: "Wedding Silks",
-                subtitle: "For your special day",
-                image:
-                  "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=700&q=85",
-              },
-              {
-                title: "Traditional Sarees",
-                subtitle: "Rooted in heritage",
-                image:
-                  "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=700&q=85",
-              },
-              {
-                title: "Festive Collection",
-                subtitle: "Celebrate beautifully",
-                image:
-                  "https://images.unsplash.com/photo-1583391733956-6c78276477e3?auto=format&fit=crop&w=700&q=85",
-              },
-            ].map((collection) => (
+            {collections.map((collection) => (
               <a
                 href="#featured"
                 key={collection.title}
@@ -259,7 +176,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products */}
+      {/* Featured products */}
       <section
         id="featured"
         className="mx-auto max-w-7xl px-4 py-12 sm:px-8 sm:py-16"
@@ -316,6 +233,7 @@ export default function HomePage() {
               Timeless Indian elegance.
             </p>
           </div>
+
           <div className="flex flex-wrap gap-5 text-sm text-[#F8F0E4]">
             <Link href="/login" className="hover:text-[#D8B878]">
               Sign In
@@ -324,6 +242,7 @@ export default function HomePage() {
               Create Account
             </Link>
           </div>
+
           <p className="text-xs text-[#D5C0B8]">© 2026 Mayuri Silks</p>
         </div>
       </footer>

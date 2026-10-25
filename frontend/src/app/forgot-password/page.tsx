@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +19,9 @@ import { API_BASE_URL } from "@/lib/utils";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
   const router = useRouter();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -29,26 +30,36 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: normalizedEmail }),
       });
+
       const result = (await response.json().catch(() => ({}))) as {
         message?: string;
       };
+
       if (!response.ok) {
-        throw new Error(result.message ?? "Unable to request password reset");
+        throw new Error(result.message ?? "Unable to request password reset.");
       }
 
-      window.sessionStorage.setItem("passwordResetEmail", email.trim().toLowerCase());
+      // Save the email for the existing OTP verification page.
+      window.sessionStorage.setItem("passwordResetEmail", normalizedEmail);
+
       window.sessionStorage.removeItem("passwordResetToken");
-      setSubmitted(true);
+
+      // Go directly to the existing reset OTP page.
+      router.push("/reset-password-otp");
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Unable to request password reset",
+          : "Unable to request password reset. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -56,26 +67,27 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-8">
-      <Card className="w-full max-w-md gap-0 border-stone-200 bg-white py-8 shadow-sm">
-        <CardHeader className="space-y-3 px-7 text-center sm:px-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-800">
-            MAYURI SILKS
-          </p>
+    <>
+      <Navbar />
 
-          <CardTitle className="text-3xl font-semibold tracking-tight text-stone-900">
-            {submitted ? "Check Your Email" : "Forgot Password?"}
-          </CardTitle>
+      <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4 py-8">
+        <Card className="w-full max-w-md gap-0 border-stone-200 bg-white py-8 shadow-sm">
+          <CardHeader className="space-y-3 px-7 text-center sm:px-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-800">
+              MAYURI SILKS
+            </p>
 
-          <CardDescription className="text-sm leading-6 text-stone-500">
-            {submitted
-              ? "If an account exists for this email, you can continue with the password reset instructions."
-              : "Enter your registered email address to start resetting your password."}
-          </CardDescription>
-        </CardHeader>
+            <CardTitle className="text-3xl font-semibold tracking-tight text-stone-900">
+              Forgot Password?
+            </CardTitle>
 
-        <CardContent className="px-7 pt-6 sm:px-8">
-          {!submitted ? (
+            <CardDescription className="text-sm leading-6 text-stone-500">
+              Enter your registered email address to receive a password reset
+              verification code.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="px-7 pt-6 sm:px-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label
@@ -102,46 +114,28 @@ export default function ForgotPasswordPage() {
                 disabled={isSubmitting}
                 className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
               >
-                {isSubmitting ? "Sending..." : "Send Reset Instructions"}
+                {isSubmitting ? "Sending..." : "Send Reset Code"}
               </Button>
             </form>
-          ) : (
-            <div className="space-y-5">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm leading-6 text-stone-700">
-                  If an account exists for this email, a reset code has been
-                  sent.
-                </p>
-              </div>
 
-              <Button
-                type="button"
-                onClick={() => router.push("/reset-password-otp")}
-                variant="outline"
-                className="h-12 w-full border-stone-300 text-stone-800"
+            {error && (
+              <p role="alert" className="mt-4 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+
+            <p className="mt-6 text-center text-sm text-stone-600">
+              Remember your password?{" "}
+              <Link
+                href="/login"
+                className="cursor-pointer font-semibold text-amber-800 hover:underline"
               >
-                Continue to Verification
-              </Button>
-            </div>
-          )}
-
-          {error && (
-            <p role="alert" className="mt-4 text-sm text-red-700">
-              {error}
+                Back to Login
+              </Link>
             </p>
-          )}
-
-          <p className="mt-6 text-center text-sm text-stone-600">
-            Remember your password?{" "}
-            <Link
-              href="/"
-              className="font-semibold text-amber-800 hover:underline"
-            >
-              Back to Login
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </main>
+          </CardContent>
+        </Card>
+      </main>
+    </>
   );
 }

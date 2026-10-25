@@ -53,3 +53,5 @@ next-env.d.ts
 
 # Local development files
 .DS_Store
+
+**/node_modules/

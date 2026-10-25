@@ -6,7 +6,7 @@ const OTPschema=new mongoose.Schema({
         unique:true,
     },
     Otp:{
-        type:Number,
+        type:String,
         required:true
     },createdAt:{
         type:Date,

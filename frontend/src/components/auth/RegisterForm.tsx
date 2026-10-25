@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/utils";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -29,14 +30,18 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const labelClass = "text-sm font-medium text-stone-800";
   const inputClass =
     "h-12 border-stone-300 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus-visible:border-amber-700 focus-visible:ring-2 focus-visible:ring-amber-100";
 
-  function handleRegister(event: React.FormEvent<HTMLFormElement>) {
+  async function handleRegister(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const fullPhone = `${countryCode}${phone.trim()}`;
 
     if (password.length < 8) {
       setError("Password must contain at least 8 characters.");
@@ -48,8 +53,44 @@ export default function RegisterForm() {
       return;
     }
 
-    // Connect registration API and send OTP through the backend later.
-    router.push("/register/verify-email");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Firstname: firstName.trim(),
+          Lastname: lastName.trim(),
+          email: normalizedEmail,
+          phone: fullPhone,
+          password,
+        }),
+      });
+
+      const result = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.message ?? "Unable to create account.");
+      }
+
+      // Save the email only after the backend confirms OTP was sent.
+      window.sessionStorage.setItem("registrationEmail", normalizedEmail);
+
+      router.push("/register/verify-email");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to create account. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -230,17 +271,18 @@ export default function RegisterForm() {
 
             <Button
               type="submit"
-              className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
+              disabled={isSubmitting}
+              className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900 disabled:opacity-50"
             >
-              Create Account
+              {isSubmitting ? "Sending OTP..." : "Create Account"}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-stone-700">
             Already have an account?{" "}
             <Link
-              href="/"
-              className="font-semibold text-amber-800 hover:underline"
+              href="/login"
+              className="cursor-pointer font-semibold text-amber-800 hover:underline"
             >
               Sign In
             </Link>

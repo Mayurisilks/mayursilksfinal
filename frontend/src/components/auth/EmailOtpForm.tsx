@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { InputOTP, REGEXP_ONLY_DIGITS } from "@heroui/react";
 
@@ -16,7 +17,19 @@ import {
 } from "@/components/ui/card";
 import { API_BASE_URL } from "@/lib/utils";
 
+type LoginResponse = {
+  message?: string;
+  token?: string;
+  user?: {
+    Firstname?: string;
+    Lastname?: string;
+    email?: string;
+  };
+};
+
 export default function EmailOtpForm() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -31,25 +44,35 @@ export default function EmailOtpForm() {
     setIsSubmitting(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       const response = await fetch(`${API_BASE_URL}/auth/send-login-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: normalizedEmail }),
       });
+
       const result = (await response.json().catch(() => ({}))) as {
         message?: string;
       };
 
       if (!response.ok) {
-        throw new Error(result.message ?? "Unable to send OTP");
+        throw new Error(result.message ?? "Unable to send OTP.");
       }
 
+      setEmail(normalizedEmail);
       setOtp("");
       setOtpSent(true);
-      setNotice(result.message ?? "If the account exists, a login OTP has been sent.");
+      setNotice(
+        result.message ?? "If the account exists, a login OTP has been sent."
+      );
     } catch (requestError) {
       setError(
-        requestError instanceof Error ? requestError.message : "Unable to send OTP",
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to send OTP. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -59,7 +82,10 @@ export default function EmailOtpForm() {
   async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (otp.length !== 6) return;
+    if (otp.length !== 6) {
+      setError("Please enter the 6-digit OTP.");
+      return;
+    }
 
     setError("");
     setNotice("");
@@ -68,23 +94,43 @@ export default function EmailOtpForm() {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/verify-login-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          otp,
+        }),
       });
-      const result = (await response.json().catch(() => ({}))) as {
-        message?: string;
-        token?: string;
-      };
+
+      const result = (await response.json().catch(() => ({}))) as LoginResponse;
 
       if (!response.ok || !result.token) {
-        throw new Error(result.message ?? "Unable to verify OTP");
+        throw new Error(result.message ?? "Unable to verify OTP.");
       }
 
+      // Save the authenticated session token.
       window.sessionStorage.setItem("authToken", result.token);
-      setNotice("Login successful.");
+
+      // Save the customer name for the Navbar profile menu.
+      const fullName = [result.user?.Firstname, result.user?.Lastname]
+        .filter((part) => typeof part === "string" && part.trim().length > 0)
+        .join(" ")
+        .trim();
+
+      window.sessionStorage.setItem(
+        "customerName",
+        fullName || result.user?.email || email.trim().toLowerCase()
+      );
+
+      // Redirect to the homepage after successful OTP login.
+      router.replace("/");
+      router.refresh();
     } catch (requestError) {
       setError(
-        requestError instanceof Error ? requestError.message : "Unable to verify OTP",
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to verify OTP. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -144,7 +190,7 @@ export default function EmailOtpForm() {
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-5">
               <p className="text-sm text-stone-600">
-                If the account exists, a code was sent to {" "}
+                If the account exists, a code was sent to{" "}
                 <span className="font-medium text-stone-900">{email}</span>
               </p>
 
@@ -166,7 +212,7 @@ export default function EmailOtpForm() {
                       <InputOTP.Slot
                         key={index}
                         index={index}
-                        className="h-12 w-10 border border-stone-300 rounded-lg bg-white text-center text-lg font-semibold text-stone-900 sm:w-12"
+                        className="h-12 w-10 rounded-lg border border-stone-300 bg-white text-center text-lg font-semibold text-stone-900 sm:w-12"
                       />
                     ))}
                   </InputOTP.Group>
@@ -197,14 +243,23 @@ export default function EmailOtpForm() {
             </form>
           )}
 
-          {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
-          {notice && <p role="status" className="mt-4 text-sm text-green-800">{notice}</p>}
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+
+          {notice && (
+            <p role="status" className="mt-4 text-sm text-green-800">
+              {notice}
+            </p>
+          )}
 
           <p className="mt-6 text-center text-sm text-stone-600">
             Back to{" "}
             <Link
-              href="/"
-              className="font-semibold text-amber-800 hover:underline"
+              href="/login"
+              className="cursor-pointer font-semibold text-amber-800 hover:underline"
             >
               Password Login
             </Link>

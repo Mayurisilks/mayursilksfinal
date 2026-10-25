@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { MayuriTextButton } from "@/components/ui/mayuri-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,39 +18,59 @@ import {
 import { API_BASE_URL } from "@/lib/utils";
 
 export default function LoginForm() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setNotice("");
     setIsSubmitting(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
+
       const result = (await response.json().catch(() => ({}))) as {
         message?: string;
         token?: string;
+        user?: {
+          Firstname?: string;
+          Lastname?: string;
+          email?: string;
+        };
       };
 
       if (!response.ok || !result.token) {
-        throw new Error(result.message ?? "Unable to sign in");
+        throw new Error(result.message ?? "Unable to sign in.");
       }
 
       window.sessionStorage.setItem("authToken", result.token);
-      setNotice("Login successful.");
+
+      const fullName = [result.user?.Firstname, result.user?.Lastname]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+      window.sessionStorage.setItem(
+        "customerName",
+        fullName || result.user?.email || "My Account"
+      );
+
+      router.replace("/");
+      router.refresh();
     } catch (requestError) {
       setError(
-        requestError instanceof Error ? requestError.message : "Unable to sign in",
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to sign in. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -91,7 +112,7 @@ export default function LoginForm() {
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
-                className="h-12 border-stone-300 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus-visible:border-amber-700 focus-visible:ring-2 focus-visible:ring-amber-100"
+                className="h-12 rounded-2xl border-stone-300 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus-visible:border-amber-700 focus-visible:ring-2 focus-visible:ring-amber-100"
               />
             </div>
 
@@ -112,7 +133,7 @@ export default function LoginForm() {
                   placeholder="Enter your password"
                   autoComplete="current-password"
                   required
-                  className="h-12 border-stone-300 bg-white pr-12 text-sm text-stone-900 placeholder:text-stone-400 focus-visible:border-amber-700 focus-visible:ring-2 focus-visible:ring-amber-100"
+                  className="h-12 rounded-2xl border-stone-300 bg-white pr-12 text-sm text-stone-900 placeholder:text-stone-400 focus-visible:border-amber-700 focus-visible:ring-2 focus-visible:ring-amber-100"
                 />
 
                 <button
@@ -139,17 +160,20 @@ export default function LoginForm() {
               </Link>
             </div>
 
-            <Button
+            {error && (
+              <p role="alert" className="text-sm text-red-700">
+                {error}
+              </p>
+            )}
+
+            <MayuriTextButton
               type="submit"
+              className="w-full"
               disabled={isSubmitting}
-              className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
             >
               {isSubmitting ? "Signing In..." : "Sign In"}
-            </Button>
+            </MayuriTextButton>
           </form>
-
-          {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
-          {notice && <p role="status" className="mt-4 text-sm text-green-800">{notice}</p>}
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-stone-200" />
@@ -157,15 +181,18 @@ export default function LoginForm() {
             <div className="h-px flex-1 bg-stone-200" />
           </div>
 
-          <Link
-            href="/login-with-otp"
-            className="flex h-12 w-full items-center justify-center rounded-md border border-stone-300 bg-white px-4 text-sm font-medium text-stone-800 transition-colors hover:bg-stone-50"
-          >
-            Login with Email OTP
+          <Link href="/login-with-otp" className="block w-full">
+            <MayuriTextButton
+              type="button"
+              variant="outline"
+              className="h-12 w-full rounded-full"
+            >
+              Login with Email OTP
+            </MayuriTextButton>
           </Link>
 
           <p className="mt-6 text-center text-sm text-stone-600">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link
               href="/register"
               className="font-semibold text-amber-800 hover:underline"
