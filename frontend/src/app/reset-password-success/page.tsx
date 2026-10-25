@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { CheckCircle2, ArrowRight, ShieldCheck } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -54,15 +53,13 @@ export default function ResetPasswordSuccessPage() {
             </p>
           </div>
 
-          <Button
-            asChild
-            className="h-12 w-full bg-stone-900 text-sm font-medium text-white hover:bg-amber-900"
+          <Link
+            href="/"
+            className="inline-flex h-12 w-full items-center justify-center rounded-md bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-amber-900"
           >
-            <Link href="/">
-              Back to Login
-              <ArrowRight size={18} className="ml-2" />
-            </Link>
-          </Button>
+            Back to Login
+            <ArrowRight size={18} className="ml-2" />
+          </Link>
 
           <p className="text-center text-xs leading-5 text-stone-500">
             For your security, never share your password with anyone.
