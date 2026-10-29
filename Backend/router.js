@@ -14,7 +14,7 @@ import {
   verify_reset_otp,
   reset_password,
 } from "./Controllers/Login.js";
-
+import { adminLogin, verifyAdminOtp,adminwithpassword} from "./Controllers/adminlogin.js";
 const route = router();
 
 route.post("/auth/login", login);
@@ -28,5 +28,7 @@ route.post("/auth/reset-password", reset_password);
 route.post("/auth/register", user_register);
 route.post("/auth/otpverification", otp_verification);
 route.post("/auth/resendotp", resend_otp);
-
+route.post("/auth/adminlogin", adminLogin);
+route.post("/auth/verify-admin-otp", verifyAdminOtp);
+route.post("/auth/admin-login-with-password", adminwithpassword);
 export default route;
